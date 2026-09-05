@@ -45,3 +45,7 @@ This is an independent [Tempo-inspired](https://tempo.xyz/developers/blog/human-
 The authenticated repository owner can run `npm run revoke -- browser` or `npm run revoke -- native` from this trusted checkout. This first locks all merges into main, then sets an owner-managed revocation flag that future verifier runs honor. The lock also blocks commits with an older successful check and approvals already in flight. The command does not delete hardware keys and never unlocks the repository automatically.
 
 To recover, enroll and independently verify a replacement public key, update its trusted config on main, clear the corresponding `BROWSER_SIGNER_REVOKED` or `NATIVE_SIGNER_REVOKED` repository variable, and restore the required signed-proof gate with strict checking and administrator enforcement. Only the trusted owner should perform recovery. No key has been revoked merely by adding this feature.
+
+## iPhone approval and automatic return
+
+The optional iPhone app, HTTPS entry/delivery relay, and small Mac relay now live in this repository. Both native flows return to the exact GitHub PR after confirmed proof delivery. iPhone uses a separately enrolled Face ID-protected key; enabling it requires actual HTTPS hosting and Apple signing. See [iPhone setup, security model, and validation](docs/IPHONE.md). The existing Mac configuration remains the default until the owner enables the mobile entry.
