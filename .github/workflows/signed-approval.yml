@@ -36,3 +36,5 @@ jobs:
       - run: node approval/run.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          BROWSER_SIGNER_REVOKED: ${{ vars.BROWSER_SIGNER_REVOKED }}
+          NATIVE_SIGNER_REVOKED: ${{ vars.NATIVE_SIGNER_REVOKED }}

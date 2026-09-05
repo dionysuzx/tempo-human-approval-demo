@@ -7,6 +7,7 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "start": "node approval/delivery.mjs"
+    "start": "node approval/delivery.mjs",
+    "revoke": "node scripts/revoke.mjs"
   }
 }

@@ -38,3 +38,11 @@ For native automatic posting, run `node approval/delivery.mjs` from this checkou
 Run `npm test` using Node 24+. Tests use actual cryptographic signatures; network effects are faked at the GitHub boundary. The earlier native/App experiment remains in `native/`, `src/`, and `scripts/` as reference, but is not used by this workflow.
 
 This is an independent [Tempo-inspired](https://tempo.xyz/developers/blog/human-authorization-in-agentic-workflows) experiment, owned by **dionysuzx**, not by an assistant. It is public because GitHub Free rejected protection on a private repo. No private credentials are committed.
+
+## Revoke a compromised key
+
+**Forgetting a key on the website only removes that browser's saved public record.** It does not remove a passkey from its provider or revoke this repository's authorization.
+
+The authenticated repository owner can run `npm run revoke -- browser` or `npm run revoke -- native` from this trusted checkout. This first locks all merges into main, then sets an owner-managed revocation flag that future verifier runs honor. The lock also blocks commits with an older successful check and approvals already in flight. The command does not delete hardware keys and never unlocks the repository automatically.
+
+To recover, enroll and independently verify a replacement public key, update its trusted config on main, clear the corresponding `BROWSER_SIGNER_REVOKED` or `NATIVE_SIGNER_REVOKED` repository variable, and restore the required signed-proof gate with strict checking and administrator enforcement. Only the trusted owner should perform recovery. No key has been revoked merely by adding this feature.

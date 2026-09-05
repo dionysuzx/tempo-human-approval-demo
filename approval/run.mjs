@@ -93,6 +93,8 @@ export async function run(api, event, config, now = Date.now()) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH));
   const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url)));
+  if (process.env.BROWSER_SIGNER_REVOKED === 'true') config.signer = null;
+  if (process.env.NATIVE_SIGNER_REVOKED === 'true') config.nativeSigner = null;
   try { await run(new API(process.env.GITHUB_REPOSITORY, process.env.GITHUB_TOKEN), event, config); }
   catch (error) { console.error(error.message); process.exitCode = 1; }
 }
