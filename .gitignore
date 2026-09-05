@@ -1,0 +1,4 @@
+.state/
+native/.build/
+.DS_Store
+*.pem

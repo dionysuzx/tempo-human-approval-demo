@@ -1,0 +1,7 @@
+{
+  "name": "tempo-human-approval-demo",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": { "test": "node --test", "start": "node src/server.mjs", "setup": "node scripts/setup.mjs", "protect": "node scripts/protect.mjs" }
+}
