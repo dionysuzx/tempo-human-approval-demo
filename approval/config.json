@@ -1,10 +1,10 @@
 {
   "signingSite": "http://localhost:8787/",
   "signer": {
-    "fingerprint": "sha256:s35KLd2siMBDUQesK2vTLMp6XVx9Ta-n7lype9lH2_4",
+    "fingerprint": "sha256:7LRJ00JhslnArWDGwPALMul-5ExywOKq8ZRndiSZ8mw",
     "origin": "http://localhost:8787",
-    "credentialId": "WIeZrHmPOTg-EGLUB-p_o3ALJKgfD_L-xMHrfFL_PHbQrXlg-IjHYOcDbV0BHM_1",
-    "publicKeySpki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWIeZrHmPOTg-EGLUB32IH5Rrn0xWbzVTWHhVUubpvq9Y43N1fIdjqNDxOpxVRKGbmDgW5MM5RutvRRtzvQ8ehw"
+    "credentialId": "e6IaIKTwiHORAGAzd-vAybbj8j1jlhDQpG-eKfeX2JY",
+    "publicKeySpki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEAzLXeZZ04M1aqgaLwydw9w1r3680lD7tGhYIPkqfokrzoujMsxjk3XRSozlILk2WoX2bFQsr4bGuqv_Omwa31A"
   },
   "nativePr": 2,
   "nativeSigner": {
