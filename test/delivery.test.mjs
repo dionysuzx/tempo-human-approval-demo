@@ -18,11 +18,11 @@ async function fixture(fail=false,number=2){
   if(path==='')return {id:42,full_name:current.repository};
   if(path===`/pulls/${number}`)return {number,state:'open',head:{sha:current.head},base:{ref:'main',sha:current.base,repo:{id:42}}};
   if(path==='/git/ref/heads/main')return {object:{sha:current.base}};
-  if(path===`/issues/${number}/comments`){calls.push(body);if(fail)throw Error('Network outcome unknown');return {html_url:'https://github.com/dionysuzx/tempo-human-approval-demo/pull/2#issuecomment-1'};}
+  if(path===`/issues/${number}/comments`){calls.push(body);if(fail)throw Error('Network outcome unknown');return {html_url:`https://github.com/dionysuzx/tempo-human-approval-demo/pull/${number}#issuecomment-1`};}
   throw Error('Unexpected destination');
  }};
  const db=new DatabaseSync(':memory:');
- const delivery=new Delivery(api,{nativePrs:[2,3],nativeSigner:{fingerprint:await fingerprint(proof.publicKeySpki),origin:proof.origin}},db,()=>2000);
+ const delivery=new Delivery(api,{nativeSigner:{fingerprint:await fingerprint(proof.publicKeySpki),origin:proof.origin}},db,()=>2000);
  return {proof,calls,delivery,db};
 }
 test('delivery verifies native proof and posts once despite concurrent retries',async()=>{
@@ -51,4 +51,4 @@ test('delivery HTTP rejects other origins and endpoints before credentials are u
  }finally{await new Promise(resolve=>http.close(resolve));}
 });
 
-test('recording PR3 uses its own exact request and delivery destination',async()=>{const x=await fixture(false,3);try{await x.delivery.deliver(x.proof);assert.equal(x.calls.length,1);assert.match(JSON.parse(x.calls[0].body).message,/Pull request: #3/);}finally{x.db.close();}});
+for(const number of [3,42,1001]) test(`PR ${number} uses its own exact request and delivery destination`,async()=>{const x=await fixture(false,number);try{const result=await x.delivery.deliver(x.proof);assert.equal(x.calls.length,1);assert.equal(result.url,`https://github.com/dionysuzx/tempo-human-approval-demo/pull/${number}#issuecomment-1`);}finally{x.db.close();}});

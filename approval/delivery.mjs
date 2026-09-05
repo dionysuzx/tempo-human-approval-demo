@@ -27,7 +27,7 @@ export class Delivery {
   async post(proof) {
     if(proof?.version!=='plain-text-native/v1')throw Error('This delivery route accepts native proofs only');
     const number=Number(proof.message?.match(/^Pull request: #([1-9][0-9]*)$/m)?.[1]);
-    if(!(this.config.nativePrs ?? [this.config.nativePr ?? 2]).includes(number))throw Error('This PR is not enabled for automatic delivery');
+    if(!Number.isSafeInteger(number) || number < 1)throw Error('Invalid pull request number');
     const pr=await this.api.call(`/pulls/${number}`);
     const repo=await this.api.call('');
     const base=await this.api.call('/git/ref/heads/main');
@@ -52,7 +52,7 @@ export function deliveryServer(delivery) {
   const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   if(req.headers.host!=='localhost:8792' || req.headers.origin!=='http://localhost:8787')return send(403,{error:'Untrusted origin'});
   res.setHeader('Access-Control-Allow-Origin','http://localhost:8787');res.setHeader('Vary','Origin');
-  if(req.url==='/status' && req.method==='GET')return send(200,{ready:!!delivery.config?.nativeSigner?.fingerprint,reason:delivery.config?.nativeSigner?.fingerprint?undefined:'Register your native signing key before approving.',repository:REPO,pullRequest:2,pullRequests:delivery.config?.nativePrs ?? [2],signerFingerprint:delivery.config?.nativeSigner?.fingerprint});
+  if(req.url==='/status' && req.method==='GET')return send(200,{ready:!!delivery.config?.nativeSigner?.fingerprint,reason:delivery.config?.nativeSigner?.fingerprint?undefined:'Register your native signing key before approving.',repository:REPO,allPullRequests:true,signerFingerprint:delivery.config?.nativeSigner?.fingerprint});
   if(!['/deliver','/deliver/2'].includes(req.url))return send(404,{error:'Unknown delivery target'});
   if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Methods','POST');res.setHeader('Access-Control-Allow-Headers','Content-Type');res.writeHead(204);return res.end();}
   if(req.method!=='POST' || req.headers['content-type']!=='application/json')return send(415,{error:'Use a JSON POST'});
@@ -66,5 +66,5 @@ if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url))
  process.umask(0o077);mkdirSync('.state',{recursive:true,mode:0o700});
  const config=JSON.parse(readFileSync(new URL('./config.json',import.meta.url)));
  const delivery=new Delivery(new CLIAPI(),config,new DatabaseSync('.state/delivery.sqlite'));
- deliveryServer(delivery).listen(8792,'localhost',()=>console.log('Native proof delivery ready for demo PR #2 on localhost:8792'));
+ deliveryServer(delivery).listen(8792,'localhost',()=>console.log('Native proof delivery ready for all demo PRs on localhost:8792'));
 }

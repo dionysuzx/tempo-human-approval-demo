@@ -6,14 +6,9 @@
     "credentialId": "e6IaIKTwiHORAGAzd-vAybbj8j1jlhDQpG-eKfeX2JY",
     "publicKeySpki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEAzLXeZZ04M1aqgaLwydw9w1r3680lD7tGhYIPkqfokrzoujMsxjk3XRSozlILk2WoX2bFQsr4bGuqv_Omwa31A"
   },
-  "nativePr": 2,
   "nativeSigner": {
     "fingerprint": "sha256:xDqd4UMJHO0gZV2cDbTyKWcZTqTFwKTtkNkne4k11NM",
     "origin": "http://localhost:8787",
     "publicKeySpki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFRASw6evITxmd3SSDj6T9_E5wDonvuIguX9lWB4El-MurbyEvP7vQTC4MuoCHT5fhsoHRzQNCDqT1_XuRVdexQ"
-  },
-  "nativePrs": [
-    2,
-    3
-  ]
+  }
 }

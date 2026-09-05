@@ -1,11 +1,10 @@
 # Approve a PR with a signed message
 
-Two ways to approve the same kind of harmless change:
+Every PR targeting `main` automatically gets a GitHub comment linking to the native Mac signing flow. Open or update a PR, ⌘-click **Open the signing page** in Brave, launch **Native Signing Bridge**, review the exact approval message, and approve with Touch ID. The local helper posts your proof automatically; GitHub verifies it and turns **Human approval / signed proof** green.
 
-- **[PR #1 — browser signing](https://github.com/dionysuzx/tempo-human-approval-demo/pull/1):** ⌘-click the bot's signing link in Brave, sign on the website, copy the proof, and paste it as a new PR comment.
-- **[PR #2 — native Touch ID](https://github.com/dionysuzx/tempo-human-approval-demo/pull/2):** ⌘-click the bot's signing link, open the native app, review and sign with Touch ID. The proof is posted automatically by the local delivery helper.
+No per-PR configuration or manual workflow run is needed. Nothing merges automatically. Keep the signing website on port 8787 and the delivery helper on port 8792 running on your Mac. For a new link after 15 minutes, comment `/request-approval`.
 
-A verified proof turns the required check green. Neither path merges automatically. GitHub Markdown cannot force a new tab, so use ⌘-click (or right-click → Open Link in New Tab) to preserve the PR page.
+The original [browser example](https://github.com/dionysuzx/tempo-human-approval-demo/pull/1) remains historical; new signing requests use the native app.
 
 The signing page currently runs on your Mac at **http://localhost:8787/**. Keep it running. This URL is not a public deployment. The page remains a generic text signer; this repository defines what a PR approval means.
 
@@ -33,7 +32,7 @@ WebAuthn verifies user presence and verification, not that Touch ID specifically
 - `approval/webauthn.mjs`: vendored dependency-free verifier from the generic signer.
 - `approval/config.json`: trusted owner-managed public signer configuration.
 
-For native automatic posting, run `node approval/delivery.mjs` from this checkout. It listens on localhost:8792, accepts only proofs for PR #2, verifies them before posting, and keeps the GitHub credential inside the local process. It reserves deliveries durably before network writes so an uncertain result is not blindly retried. This process uses the existing `gh` authentication; it must remain trusted.
+For native automatic posting, run `node approval/delivery.mjs` from this checkout. It listens on localhost:8792, accepts native proofs for any open PR targeting main in this repository, verifies them before posting, and keeps the GitHub credential inside the local process. It reserves deliveries durably before network writes so an uncertain result is not blindly retried. This process uses the existing `gh` authentication; it must remain trusted.
 
 Run `npm test` using Node 24+. Tests use actual cryptographic signatures; network effects are faked at the GitHub boundary. The earlier native/App experiment remains in `native/`, `src/`, and `scripts/` as reference, but is not used by this workflow.
 
