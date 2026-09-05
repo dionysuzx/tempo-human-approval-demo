@@ -11,5 +11,9 @@
     "fingerprint": "sha256:xDqd4UMJHO0gZV2cDbTyKWcZTqTFwKTtkNkne4k11NM",
     "origin": "http://localhost:8787",
     "publicKeySpki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFRASw6evITxmd3SSDj6T9_E5wDonvuIguX9lWB4El-MurbyEvP7vQTC4MuoCHT5fhsoHRzQNCDqT1_XuRVdexQ"
-  }
+  },
+  "nativePrs": [
+    2,
+    3
+  ]
 }

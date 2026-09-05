@@ -73,7 +73,7 @@ export async function run(api, event, config, now = Date.now()) {
   if (previous && !reusable && previous.status !== 'completed') await api.call(`/check-runs/${previous.id}`, 'PATCH', {
     status: 'completed', conclusion: 'cancelled', output: { title: 'Superseded', summary: 'Use the latest signing link.', text: JSON.stringify({ ...saved(previous), state: 'superseded' }) } });
   const request = reusable ?? requestFor(current, now);
-  const nativeRoute = number === config.nativePr;
+  const nativeRoute = (config.nativePrs ?? [config.nativePr]).includes(number);
   const enrolled = nativeRoute ? !!config.nativeSigner?.fingerprint : !!config.signer?.fingerprint;
   const site = new URL(config.signingSite);
   if (nativeRoute) site.pathname = '/native';

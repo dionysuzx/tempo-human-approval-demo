@@ -26,21 +26,23 @@ export class Delivery {
   }
   async post(proof) {
     if(proof?.version!=='plain-text-native/v1')throw Error('This delivery route accepts native proofs only');
-    const pr=await this.api.call('/pulls/2');
+    const number=Number(proof.message?.match(/^Pull request: #([1-9][0-9]*)$/m)?.[1]);
+    if(!(this.config.nativePrs ?? [this.config.nativePr ?? 2]).includes(number))throw Error('This PR is not enabled for automatic delivery');
+    const pr=await this.api.call(`/pulls/${number}`);
     const repo=await this.api.call('');
     const base=await this.api.call('/git/ref/heads/main');
     const current=snapshot(repo,{...pr,base:{...pr.base,sha:base.object.sha}});
-    const check=await this.api.latest(current.head,2);
+    const check=await this.api.latest(current.head,number);
     if(!check)throw Error('No current approval request; refresh the PR signing link');
     const request=JSON.parse(check.output.text);
-    if(check.external_id!==`signed-proof:2:${request.id}` || check.head_sha!==request.head)throw Error('Invalid request record');
+    if(check.external_id!==`signed-proof:${number}:${request.id}` || check.head_sha!==request.head)throw Error('Invalid request record');
     const existing=this.db.prepare('SELECT * FROM delivery WHERE request_id=?').get(request.id);
     if(existing)throw Error(existing.status==='posted'?'This request was already delivered; check the PR.':'Delivery outcome uncertain; check the PR before retrying.');
     if(check.status==='completed')throw Error('Approval request already completed');
     await acceptProof(proof,request,current,this.config,this.clock());
     this.db.prepare('INSERT INTO delivery VALUES (?, ?, NULL)').run(request.id,'reserved');
     // Reserve before network write: ambiguous failures never create blind duplicate comments.
-    const comment=await this.api.call('/issues/2/comments','POST',{body:JSON.stringify(proof,null,2)});
+    const comment=await this.api.call(`/issues/${number}/comments`,'POST',{body:JSON.stringify(proof,null,2)});
     this.db.prepare("UPDATE delivery SET status='posted',url=? WHERE request_id=?").run(comment.html_url,request.id);
     return {posted:true,url:comment.html_url};
   }
@@ -50,7 +52,7 @@ export function deliveryServer(delivery) {
   const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
   if(req.headers.host!=='localhost:8792' || req.headers.origin!=='http://localhost:8787')return send(403,{error:'Untrusted origin'});
   res.setHeader('Access-Control-Allow-Origin','http://localhost:8787');res.setHeader('Vary','Origin');
-  if(req.url==='/status' && req.method==='GET')return send(200,{ready:!!delivery.config?.nativeSigner?.fingerprint,reason:delivery.config?.nativeSigner?.fingerprint?undefined:'Register your native signing key before approving.',repository:REPO,pullRequest:2,signerFingerprint:delivery.config?.nativeSigner?.fingerprint});
+  if(req.url==='/status' && req.method==='GET')return send(200,{ready:!!delivery.config?.nativeSigner?.fingerprint,reason:delivery.config?.nativeSigner?.fingerprint?undefined:'Register your native signing key before approving.',repository:REPO,pullRequest:2,pullRequests:delivery.config?.nativePrs ?? [2],signerFingerprint:delivery.config?.nativeSigner?.fingerprint});
   if(!['/deliver','/deliver/2'].includes(req.url))return send(404,{error:'Unknown delivery target'});
   if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Methods','POST');res.setHeader('Access-Control-Allow-Headers','Content-Type');res.writeHead(204);return res.end();}
   if(req.method!=='POST' || req.headers['content-type']!=='application/json')return send(415,{error:'Use a JSON POST'});
