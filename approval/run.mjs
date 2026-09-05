@@ -10,7 +10,7 @@ export class API {
       headers: { Authorization: `Bearer ${this.token}`, Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(20000) });
-    if (!response.ok) throw Error(`GitHub ${method} ${path}: ${response.status}`);
+    if (!response.ok) { const detail = await response.json().catch(() => ({})); throw Error(`GitHub ${method} ${path}: ${response.status} ${detail.message ?? ''}`); }
     return response.status === 204 ? null : response.json();
   }
   async latest(head, pr) {
@@ -58,17 +58,23 @@ export async function run(api, event, config, now = Date.now()) {
     // Only contributors can rotate challenges; arbitrary comments cannot revoke approval.
     if (!['OWNER','MEMBER','COLLABORATOR'].includes(comment.author_association)) throw Error('Only a repository contributor may request a fresh challenge');
   }
+  let reusable;
   if (previous && !event.comment) {
     const old = saved(previous);
-    if (sameAction(old, current) && (old.state === 'approved' || (old.state === 'pending' && old.expires > now))) return;
+    if (sameAction(old, current) && old.state === 'approved') return;
+    if (sameAction(old, current) && old.state === 'pending' && old.expires > now) {
+      if (old.linkCommentId) return;
+      reusable = old;
+    }
   }
-  if (previous && previous.status !== 'completed') await api.call(`/check-runs/${previous.id}`, 'PATCH', {
+  if (previous && !reusable && previous.status !== 'completed') await api.call(`/check-runs/${previous.id}`, 'PATCH', {
     status: 'completed', conclusion: 'cancelled', output: { title: 'Superseded', summary: 'Use the latest signing link.', text: JSON.stringify({ ...saved(previous), state: 'superseded' }) } });
-  const request = requestFor(current, now);
+  const request = reusable ?? requestFor(current, now);
   const link = signingLink(config.signingSite, request);
-  await api.call('/check-runs', 'POST', { name: CHECK, head_sha: current.head, external_id: `signed-proof:${number}:${request.id}`,
+  const check = reusable ? previous : await api.call('/check-runs', 'POST', { name: CHECK, head_sha: current.head, external_id: `signed-proof:${number}:${request.id}`,
     status: 'in_progress', output: { title: 'Waiting for your signed proof', summary: `Open the signing link in the PR comment.`, text: JSON.stringify(request) } });
-  await api.call(`/issues/${number}/comments`, 'POST', { body: `### Approve this PR\n\n[Open the signing page](${link}) in **Brave**, review the message, and click **Sign**. Confirm your passkey or Touch ID, copy the proof, then paste it as a new comment on this PR.\n\nCommit: \`${current.head}\` · Link expires ${new Date(request.expires).toISOString()}.\n\nThe signer currently runs on your Mac at localhost:8787. Keep it running. For a new link, comment \`/request-approval\`.${config.signer ? '' : '\n\nOne-time signer enrollment is still pending; the gate stays blocked until the owner pins your signer.'}` });
+  const linkComment = await api.call(`/issues/${number}/comments`, 'POST', { body: `### Approve this PR\n\n[Open the signing page](${link}) in **Brave**, review the message, and click **Sign**. Confirm your passkey or Touch ID, copy the proof, then paste it as a new comment on this PR.\n\nCommit: \`${current.head}\` · Link expires ${new Date(request.expires).toISOString()}.\n\nThe signer currently runs on your Mac at localhost:8787. Keep it running. For a new link, comment \`/request-approval\`.${config.signer ? '' : '\n\nOne-time signer enrollment is still pending; the gate stays blocked until the owner pins your signer.'}` });
+  await api.call(`/check-runs/${check.id}`, 'PATCH', { output: { title: 'Waiting for your signed proof', summary: 'Open the signing link in the PR comment.', text: JSON.stringify({ ...request, linkCommentId: linkComment.id }) } });
   console.log('Posted the signing link; approval remains blocked.');
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

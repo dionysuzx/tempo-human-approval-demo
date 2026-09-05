@@ -15,7 +15,7 @@ permissions:
   contents: read
   checks: write
   issues: write
-  pull-requests: read
+  pull-requests: write
 concurrency:
   group: signed-approval-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
   cancel-in-progress: false
