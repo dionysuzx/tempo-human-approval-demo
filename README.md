@@ -1,12 +1,12 @@
 # Approve a PR with a signed message
 
-Every PR targeting `main` automatically gets a GitHub comment linking to the native Mac signing flow. Open or update a PR, ⌘-click **Open the signing page** in Brave, launch **Native Signing Bridge**, review the exact approval message, and approve with Touch ID. The local helper posts your proof automatically; GitHub verifies it and turns **Human approval / signed proof** green.
+Every PR targeting `main` automatically gets a GitHub comment linking to the native Mac signing flow. Open or update a PR, ⌘-click **Open Native Signing Bridge** in Brave, then click **Open Mac app** on the local launch page, review the exact approval message, and approve with Touch ID. The local helper posts your proof automatically; GitHub verifies it and turns **Human approval / signed proof** green.
 
 No per-PR configuration or manual workflow run is needed. Nothing merges automatically. Keep the signing website on port 8787 and the delivery helper on port 8792 running on your Mac. For a new link after 15 minutes, comment `/request-approval`.
 
 The original [browser example](https://github.com/dionysuzx/tempo-human-approval-demo/pull/1) remains historical; new signing requests use the native app.
 
-The signing page currently runs on your Mac at **http://localhost:8787/**. Keep it running. This URL is not a public deployment. The page remains a generic text signer; this repository defines what a PR approval means.
+The native launch page runs on your Mac at **http://localhost:8787/native**. Keep it running. This URL is not a public deployment. The page remains a generic text signer; this repository defines what a PR approval means.
 
 ## First time
 

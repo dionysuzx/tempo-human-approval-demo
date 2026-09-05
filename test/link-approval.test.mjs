@@ -46,7 +46,7 @@ test('workflow adapter issues challenge then consumes proof once',async()=>{
   }};
   const config={signingSite:'http://localhost:8787/',signer:null};
   await run(api,{pull_request:{number:1}},config,1000);
-  assert.equal(check.status,'in_progress'); assert.match(comments[0],/Open the signing page/);
+  assert.equal(check.status,'in_progress'); assert.match(comments[0],/Set up Native Signing Bridge/);
   const proof=await fixture(message(JSON.parse(check.output.text)));
   config.signer={fingerprint:await fingerprint(proof.publicKeySpki),origin:proof.origin,credentialId:proof.credentialId};
   commentBody=JSON.stringify(proof);
@@ -68,8 +68,9 @@ for (const number of [1,3,1001]) test(`new PR ${number} automatically receives n
   throw Error('Unexpected destination '+path);
  }};
  await run(api,{pull_request:{number}},{signingSite:'http://localhost:8787/',nativeSigner:{fingerprint:'registered'}},1000);
- assert.match(comments[0],/Native Signing Bridge/);
- const link=new URL(comments[0].match(/\[Open the signing page\]\(([^)]+)\)/)[1]);
+ assert.match(comments[0],/Open Mac app/);
+ assert.doesNotMatch(comments[0],/Open the signing page|copy the proof/);
+ const link=new URL(comments[0].match(/\[Open Native Signing Bridge\]\(([^)]+)\)/)[1]);
  assert.equal(link.pathname,'/native');
  const fragment=new URLSearchParams(link.hash.slice(1));
  assert.equal(fragment.get('deliver'),'http://localhost:8792/deliver');
