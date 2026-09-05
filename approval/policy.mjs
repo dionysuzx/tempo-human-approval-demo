@@ -1,5 +1,6 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { verifyProof } from './webauthn.mjs';
+import { verifyNative } from './native.mjs';
 export const CHECK = 'Human approval / signed proof';
 export const APP_ID = 15368; // GitHub Actions on github.com; verify live when installing protection.
 export const LIFETIME = 15 * 60 * 1000;
@@ -30,14 +31,15 @@ export function parseComment(body) {
   return JSON.parse(text);
 }
 export async function acceptProof(proof, request, current, config, now = Date.now()) {
-  if (!config.signer?.fingerprint || !config.signer?.origin || !config.signer?.credentialId) throw Error('Signer enrollment is not configured by the repository owner');
+  const native = proof.version === 'plain-text-native/v1';
+  if (!native && (!config.signer?.fingerprint || !config.signer?.origin || !config.signer?.credentialId)) throw Error('Signer enrollment is not configured by the repository owner');
   if (request.version !== 1 || request.state !== 'pending') throw Error('Request was already used or superseded');
   if (!Number.isSafeInteger(request.issued) || request.expires !== request.issued + LIFETIME || now < request.issued || now >= request.expires) throw Error('Request has expired; comment /request-approval for a fresh link');
   if (!sameAction(request, current)) throw Error('PR changed; use the link for its current commits');
-  if (proof.payloadText !== message(request)) throw Error('Proof signs a different action or request');
-  if (proof.origin !== config.signer.origin || proof.credentialId !== config.signer.credentialId) throw Error('Proof is from an unregistered credential or origin');
-  const result = await verifyProof(proof, config.signer.fingerprint);
-  if (result.trust !== 'matches') throw Error('Signer is not trusted');
+  if ((native ? proof.message : proof.payloadText) !== message(request)) throw Error('Proof signs a different action or request');
+  if (!native && (proof.origin !== config.signer.origin || proof.credentialId !== config.signer.credentialId)) throw Error('Proof is from an unregistered credential or origin');
+  const result = native ? await verifyNative(proof, config.nativeSigner, now) : await verifyProof(proof, config.signer.fingerprint);
+  if (!native && result.trust !== 'matches') throw Error('Signer is not trusted');
   return { ...request, state: 'approved', acceptedAt: now,
-    proofHash: createHash('sha256').update(JSON.stringify(proof)).digest('hex'), signer: result.fingerprint };
+    proofKind: native ? 'native' : 'webauthn', proofHash: createHash('sha256').update(JSON.stringify(proof)).digest('hex'), signer: result.fingerprint };
 }

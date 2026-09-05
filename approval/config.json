@@ -5,5 +5,11 @@
     "origin": "http://localhost:8787",
     "credentialId": "WIeZrHmPOTg-EGLUB-p_o3ALJKgfD_L-xMHrfFL_PHbQrXlg-IjHYOcDbV0BHM_1",
     "publicKeySpki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWIeZrHmPOTg-EGLUB32IH5Rrn0xWbzVTWHhVUubpvq9Y43N1fIdjqNDxOpxVRKGbmDgW5MM5RutvRRtzvQ8ehw"
+  },
+  "nativePr": 2,
+  "nativeSigner": {
+    "fingerprint": "sha256:xDqd4UMJHO0gZV2cDbTyKWcZTqTFwKTtkNkne4k11NM",
+    "origin": "http://localhost:8787",
+    "publicKeySpki": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFRASw6evITxmd3SSDj6T9_E5wDonvuIguX9lWB4El-MurbyEvP7vQTC4MuoCHT5fhsoHRzQNCDqT1_XuRVdexQ"
   }
 }
