@@ -33,7 +33,8 @@ export async function run(api, event, config, now = Date.now()) {
   if (!Number.isSafeInteger(number) || number < 1 || (event.issue && !event.issue.pull_request)) return;
   const repo = await api.call('');
   const pr = await api.call(`/pulls/${number}`);
-  const current = snapshot(repo, pr);
+  const base = await api.call('/git/ref/heads/main');
+  const current = snapshot(repo, { ...pr, base: { ...pr.base, sha: base.object.sha } });
   const previous = await api.latest(current.head, number);
   if (event.comment) {
     const comment = await api.call(`/issues/comments/${event.comment.id}`);
@@ -46,7 +47,9 @@ export async function run(api, event, config, now = Date.now()) {
       if (previous.status === 'completed') throw Error('Request already completed; replay rejected');
       const receipt = await acceptProof(parseComment(body), request, current, config, now);
       // Re-fetch just before publication. The check also belongs to the immutable head SHA.
-      const fresh = snapshot(await api.call(''), await api.call(`/pulls/${number}`));
+      const freshPR = await api.call(`/pulls/${number}`);
+      const freshBase = await api.call('/git/ref/heads/main');
+      const fresh = snapshot(await api.call(''), { ...freshPR, base: { ...freshPR.base, sha: freshBase.object.sha } });
       if (!sameAction(current, fresh)) throw Error('PR changed during verification');
       receipt.commentId = comment.id;
       await api.call(`/check-runs/${previous.id}`, 'PATCH', { status: 'completed', conclusion: 'success',

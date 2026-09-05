@@ -35,6 +35,7 @@ test('prefill preserves exact bytes and proof comment parser accepts JSON fence'
 test('workflow adapter issues challenge then consumes proof once',async()=>{
   let check, commentBody; const comments=[];
   const api={latest:async()=>check,call:async(path,method='GET',body)=>{
+    if(path==='/git/ref/heads/main')return {object:{sha:current.base}};
     if(path==='')return {id:42,full_name:'owner/demo'};
     if(path==='/pulls/1')return {number:1,state:'open',head:{sha:current.head},base:{sha:current.base,ref:'main',repo:{id:42}}};
     if(path==='/check-runs' && method==='POST'){check={...body,id:5,head_sha:current.head};return check;}
