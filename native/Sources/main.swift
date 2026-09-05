@@ -49,6 +49,13 @@ func post(_ path: String, _ body: [String: Any], token: String) async throws -> 
 func run() async throws {
     let args = CommandLine.arguments
     guard args.count >= 2 else { throw Failure("Use: human-approval enroll | approve <PR number>") }
+    if args[1] == "doctor" {
+        let auth = LAContext()
+        var error: NSError?
+        print("Secure Enclave available: \(SecureEnclave.isAvailable)")
+        print("Touch ID ready: \(auth.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error))")
+        return
+    }
     let file = ".state/enclave-key"
     if args[1] == "enroll" {
         guard SecureEnclave.isAvailable else { throw Failure("This Mac has no Secure Enclave") }

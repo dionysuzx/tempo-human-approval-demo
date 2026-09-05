@@ -8,7 +8,7 @@ const gh = new GitHub({ ...config, privateKey: readFileSync('.state/github-app.p
 await gh.pr(1);
 const body = { required_status_checks: { strict: true, checks: [{ context: CHECK, app_id: config.appId }] },
   enforce_admins: true, required_pull_request_reviews: null, restrictions: null,
-  allow_force_pushes: false, allow_deletions: false, required_conversation_resolution: true };
+  allow_force_pushes: false, allow_deletions: false, lock_branch: false, required_conversation_resolution: true };
 const result = JSON.parse(execFileSync('gh', ['api', '--method', 'PUT', `repos/${config.repo}/branches/main/protection`, '--input', '-'],
   { input: JSON.stringify(body), encoding: 'utf8' }));
 if (!result.enforce_admins?.enabled || !result.required_status_checks?.checks?.some(x => x.context === CHECK && x.app_id === config.appId)) {

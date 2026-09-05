@@ -4,7 +4,7 @@ An independent experiment inspired by [Tempo's Voight-Kampff](https://tempo.xyz/
 
 **Try it:** open PR #1, run `./approve.command`, touch the sensor, then see the required GitHub check turn green. A new commit needs a new approval. The demo never merges automatically.
 
-The repository belongs to **dionysuzx**, the authenticated user's account. Assistants have no separate GitHub account.
+The repository belongs to **dionysuzx**, the authenticated user's account. The in-app browser was signed into **abyssalwhip** during setup; use **dionysuzx** when creating the private App. Assistants have no separate GitHub account.
 
 ## First-time setup
 
@@ -46,6 +46,8 @@ Expiry governs when a signature can be accepted. An accepted GitHub check remain
 npm test
 swift build --package-path native -c release
 ```
+
+The CI definition is provided as `ci/test-workflow.yml`; it is inactive because the publishing token lacks workflow scope. Local tests were run instead.
 
 No npm dependencies. Tests use real P-256 signatures and SQLite, including a loopback HTTP round trip; GitHub is replaced at the network boundary. Swift builds the actual Secure Enclave signer. Hardware signing and a live App-authenticated check require the user's enrollment and installation; passing tests does not stand in for those steps.
 
