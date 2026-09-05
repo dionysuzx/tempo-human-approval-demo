@@ -7,18 +7,18 @@ import {Delivery,deliveryServer} from '../approval/delivery.mjs';
 import {nativeBytes} from '../approval/native.mjs';
 import {fingerprint,encode} from '../approval/webauthn.mjs';
 import {requestFor,message} from '../approval/policy.mjs';
-async function fixture(fail=false){
+async function fixture(fail=false,number=2){
  const keys=generateKeyPairSync('ec',{namedCurve:'prime256v1'});
- const current={repository:'dionysuzx/tempo-human-approval-demo',repositoryId:42,pr:2,head:'a'.repeat(40),base:'b'.repeat(40)};
+ const current={repository:'dionysuzx/tempo-human-approval-demo',repositoryId:42,pr:number,head:'a'.repeat(40),base:'b'.repeat(40)};
  const request=requestFor(current,1000);
  const proof={version:'plain-text-native/v1',origin:'http://localhost:8787',requestID:encode(new Uint8Array(32).fill(1)),nonce:encode(new Uint8Array(32).fill(2)),expiresAt:new Date(200000).toISOString(),message:message(request),publicKeySpki:keys.publicKey.export({type:'spki',format:'der'}).toString('base64url')};
  proof.signature=sign('sha256',nativeBytes(proof),keys.privateKey).toString('base64url');
  const calls=[];
- const api={latest:async()=>({status:'in_progress',head_sha:current.head,external_id:`signed-proof:2:${request.id}`,output:{text:JSON.stringify(request)}}),call:async(path,method,body)=>{
+ const api={latest:async()=>({status:'in_progress',head_sha:current.head,external_id:`signed-proof:${number}:${request.id}`,output:{text:JSON.stringify(request)}}),call:async(path,method,body)=>{
   if(path==='')return {id:42,full_name:current.repository};
-  if(path==='/pulls/2')return {number:2,state:'open',head:{sha:current.head},base:{ref:'main',sha:current.base,repo:{id:42}}};
+  if(path===`/pulls/${number}`)return {number,state:'open',head:{sha:current.head},base:{ref:'main',sha:current.base,repo:{id:42}}};
   if(path==='/git/ref/heads/main')return {object:{sha:current.base}};
-  if(path==='/issues/2/comments'){calls.push(body);if(fail)throw Error('Network outcome unknown');return {html_url:'https://github.com/dionysuzx/tempo-human-approval-demo/pull/2#issuecomment-1'};}
+  if(path===`/issues/${number}/comments`){calls.push(body);if(fail)throw Error('Network outcome unknown');return {html_url:`https://github.com/dionysuzx/tempo-human-approval-demo/pull/${number}#issuecomment-1`};}
   throw Error('Unexpected destination');
  }};
  const db=new DatabaseSync(':memory:');
@@ -50,3 +50,5 @@ test('delivery HTTP rejects other origins and endpoints before credentials are u
   assert.equal(called,false);
  }finally{await new Promise(resolve=>http.close(resolve));}
 });
+
+for(const number of [3,42,1001]) test(`PR ${number} uses its own exact request and delivery destination`,async()=>{const x=await fixture(false,number);try{const result=await x.delivery.deliver(x.proof);assert.equal(x.calls.length,1);assert.equal(result.url,`https://github.com/dionysuzx/tempo-human-approval-demo/pull/${number}#issuecomment-1`);}finally{x.db.close();}});

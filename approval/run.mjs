@@ -73,19 +73,17 @@ export async function run(api, event, config, now = Date.now()) {
   if (previous && !reusable && previous.status !== 'completed') await api.call(`/check-runs/${previous.id}`, 'PATCH', {
     status: 'completed', conclusion: 'cancelled', output: { title: 'Superseded', summary: 'Use the latest signing link.', text: JSON.stringify({ ...saved(previous), state: 'superseded' }) } });
   const request = reusable ?? requestFor(current, now);
-  const nativeRoute = number === config.nativePr;
-  const enrolled = nativeRoute ? !!config.nativeSigner?.fingerprint : !!config.signer?.fingerprint;
+  const enrolled = !!config.nativeSigner?.fingerprint;
   const site = new URL(config.signingSite);
-  if (nativeRoute) site.pathname = '/native';
+  site.pathname = '/native';
   const linkURL = new URL(signingLink(site.href, request));
-  if (nativeRoute) { const fragment = new URLSearchParams(linkURL.hash.slice(1)); fragment.set('delivery', 'github-demo'); fragment.set('deliver', 'http://localhost:8792/deliver/2'); linkURL.hash = fragment.toString(); }
-  if (!nativeRoute && config.signer?.fingerprint) { const fragment = new URLSearchParams(linkURL.hash.slice(1)); fragment.set('signer', config.signer.fingerprint); linkURL.hash = fragment.toString(); }
+  { const fragment = new URLSearchParams(linkURL.hash.slice(1)); fragment.set('delivery', 'github-demo'); fragment.set('deliver', 'http://localhost:8792/deliver'); linkURL.hash = fragment.toString(); }
   const link = linkURL.href;
   const check = reusable ? previous : await api.call('/check-runs', 'POST', { name: CHECK, head_sha: current.head, external_id: `signed-proof:${number}:${request.id}`,
     status: 'in_progress', output: { title: 'Waiting for your signed proof', summary: `Open the signing link in the PR comment.`, text: JSON.stringify(request) } });
   const instructions = !enrolled
-    ? `### Register your signing key first\n\nThis repository has not registered your ${nativeRoute ? 'native' : 'browser'} signing key yet. [Open the signing page](${site.href}) to set it up, then have the repository owner register the public record shown there. No approval can pass until registration is complete.\n\nAfter registration, comment \`/request-approval\` for a signing link.`
-    : `### Approve this PR\n\n**⌘-click** [Open the signing page](${link}) in **Brave** to keep this PR open in its own tab. Review the message, then ${nativeRoute ? 'open the native app and approve with Touch ID. Your signed proof will be posted here automatically.' : 'click **Sign**. Confirm your passkey or Touch ID, copy the proof, then paste it as a new comment on this PR.'}\n\nCommit: \`${current.head}\` · Link expires ${new Date(request.expires).toISOString()}.\n\nKeep the local signer running. For a new link, comment \`/request-approval\`.`;
+    ? `### Register your signing key first\n\nThis repository has not registered your native signing key yet. [Set up Native Signing Bridge](${site.href}) to set it up, then have the repository owner register the public record shown there. No approval can pass until registration is complete.\n\nAfter registration, comment \`/request-approval\` for a signing link.`
+    : `### Approve this PR\n\n**⌘-click** [Open Native Signing Bridge](${link}) in **Brave** to keep this PR open in its own tab. On the local launch page, click **Open Mac app**, review the message in **Native Signing Bridge**, and approve with Touch ID. Your signed proof will be posted here automatically.\n\nCommit: \`${current.head}\` · Link expires ${new Date(request.expires).toISOString()}.\n\nKeep the local signer running. For a new link, comment \`/request-approval\`.`;
   const linkComment = await api.call(`/issues/${number}/comments`, 'POST', { body: instructions });
   await api.call(`/check-runs/${check.id}`, 'PATCH', { output: { title: 'Waiting for your signed proof', summary: 'Open the signing link in the PR comment.', text: JSON.stringify({ ...request, linkCommentId: linkComment.id }) } });
   console.log('Posted the signing link; approval remains blocked.');

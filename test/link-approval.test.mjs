@@ -46,7 +46,7 @@ test('workflow adapter issues challenge then consumes proof once',async()=>{
   }};
   const config={signingSite:'http://localhost:8787/',signer:null};
   await run(api,{pull_request:{number:1}},config,1000);
-  assert.equal(check.status,'in_progress'); assert.match(comments[0],/Open the signing page/);
+  assert.equal(check.status,'in_progress'); assert.match(comments[0],/Set up Native Signing Bridge/);
   const proof=await fixture(message(JSON.parse(check.output.text)));
   config.signer={fingerprint:await fingerprint(proof.publicKeySpki),origin:proof.origin,credentialId:proof.credentialId};
   commentBody=JSON.stringify(proof);
@@ -54,4 +54,25 @@ test('workflow adapter issues challenge then consumes proof once',async()=>{
   assert.equal(check.conclusion,'success'); assert.equal(JSON.parse(check.output.text).commentId,8);
   await assert.rejects(run(api,{issue:{number:1,pull_request:{}},comment:{id:8}},config,3000),/replay rejected/);
   assert.equal(check.conclusion,'success');
+});
+
+for (const number of [1,3,1001]) test(`new PR ${number} automatically receives native signing link`, async()=>{
+ const comments=[]; let check;
+ const api={latest:async()=>null,call:async(path,method,body)=>{
+  if(path==='')return {id:42,full_name:'owner/demo'};
+  if(path===`/pulls/${number}`)return {number,state:'open',head:{sha:current.head},base:{ref:'main',sha:current.base,repo:{id:42}}};
+  if(path==='/git/ref/heads/main')return {object:{sha:current.base}};
+  if(path==='/check-runs'){check={...body,id:9};return check;}
+  if(path===`/issues/${number}/comments`){comments.push(body.body);return {id:10};}
+  if(path==='/check-runs/9')return {};
+  throw Error('Unexpected destination '+path);
+ }};
+ await run(api,{pull_request:{number}},{signingSite:'http://localhost:8787/',nativeSigner:{fingerprint:'registered'}},1000);
+ assert.match(comments[0],/Open Mac app/);
+ assert.doesNotMatch(comments[0],/Open the signing page|copy the proof/);
+ const link=new URL(comments[0].match(/\[Open Native Signing Bridge\]\(([^)]+)\)/)[1]);
+ assert.equal(link.pathname,'/native');
+ const fragment=new URLSearchParams(link.hash.slice(1));
+ assert.equal(fragment.get('deliver'),'http://localhost:8792/deliver');
+ assert.equal(fragment.get('message'),message(JSON.parse(check.output.text)));
 });
