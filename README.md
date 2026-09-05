@@ -1,58 +1,33 @@
-# Approve a GitHub PR with Touch ID
+# Approve a PR with a signed message
 
-An independent experiment inspired by [Tempo's Voight-Kampff](https://tempo.xyz/developers/blog/human-authorization-in-agentic-workflows). It is not Tempo's code or service.
+Open [PR #1](https://github.com/dionysuzx/tempo-human-approval-demo/pull/1). Its automation posts an **Open the signing page** link. In Brave, review the prefilled message, sign with your passkey or Touch ID, copy the proof, and paste it as a new PR comment. A verified proof turns the required check green. You still choose when to merge.
 
-**Try it:** open PR #1, run `./approve.command`, touch the sensor, then see the required GitHub check turn green. A new commit needs a new approval. The demo never merges automatically.
+The signing page currently runs on your Mac at **http://localhost:8787/**. Keep it running. This URL is not a public deployment. The page remains a generic text signer; this repository defines what a PR approval means.
 
-The repository belongs to **dionysuzx**, the authenticated user's account. The in-app browser was signed into **abyssalwhip** during setup; use **dionysuzx** when creating the private App. Assistants have no separate GitHub account.
+## First time
 
-## First-time setup
+Use **Set up signing** on that page. The repository owner must then pin the public signer fingerprint and origin in `approval/config.json` on trusted `main`. A key supplied by a PR comment is never automatically trusted. No GitHub App creation or native launcher is required for this flow.
 
-Requires a Mac with Touch ID configured, Swift 6, Node 24+, and authenticated `gh`. Private repository branch protection requires a qualifying GitHub plan.
+Links expire after 15 minutes. Comment `/request-approval` for a fresh link. A changed head or base commit requires a new request. Paste the full copied JSON directly, or inside a fenced `json` block.
 
-1. [Create the prefilled GitHub App](https://github.com/settings/apps/new?name=dionysuzx-touch-id-demo&url=https%3A%2F%2Fgithub.com%2Fdionysuzx%2Ftempo-human-approval-demo&description=Touch%20ID%20approval%20for%20one%20demo%20repository&public=false&webhook_active=false&checks=write&pull_requests=read). Keep it private and webhooks off. It only needs **Checks: read/write** and **Pull requests: read** (Metadata read is automatic). Click **Create GitHub App**.
-2. On its settings page, note the **App ID** and click **Generate a private key**. Click **Install App**, choose your account, and select **only `tempo-human-approval-demo`**. The number at the end of the installation page URL is the installation ID.
-3. In this repository folder, run `./setup.command`. Touch ID enrolls your Mac automatically; paste the two IDs and the path to the downloaded `.pem` file when asked.
-4. Run `npm run protect`, then `npm start`. Leave this terminal open.
-5. In another terminal in this folder, run `./approve.command`. Review the commit in GitHub before touching the sensor. Refresh PR #1 to see the result.
+## Verification boundary
 
-Future approvals only need steps 4 (`npm start`) and 5. Use `./approve.command 2` for another PR. Nothing starts automatically or installs a background service.
+The workflow checks out only `main`, never the PR branch. It parses comment/event data without shell interpolation, requires a pre-enrolled public key and expected origin, verifies WebAuthn ES256 with user presence and verification, and compares the exact signed message with its stored repository ID, PR, head/base commits, action, random request ID, and expiry. Per-PR concurrency serializes changes. A successful check stores a consumed receipt; replay is rejected.
 
-If GitHub rejects protection because of the account plan, setup stays blocked. Use a qualifying plan or explicitly choose to make this demo public; the setup script never changes visibility.
+The required check is pinned to **GitHub Actions**. This blocks an ordinary token from satisfying it with a same-name status from another identity. **It does not distinguish this workflow from another workflow running as GitHub Actions.** Someone who can introduce a malicious workflow with check-writing permissions, modify trusted main, or change branch protection can bypass this demo. This assistant's administrator credentials are outside the protected agent boundary. For rigid enforcement, put the verifier in a separately administered service/App or require an independently controlled workflow policy.
 
-## What this demonstrates
+Checks attach to commit SHAs, so reusing exactly the same SHA across multiple PRs is not a separate GitHub check boundary. Accepted approvals persist for that commit; the 15-minute expiry governs acceptance, not later merge time. Strict protection requires the PR branch to be current with main.
 
-- A real P-256 key in Apple's Secure Enclave, requiring `biometryCurrentSet` for private-key use. No software-key or password fallback. Changing enrolled fingerprints invalidates the key.
-- A two-minute, single-use request tied to repository, PR number, exact head and base commits, decision, and the enrolled key's fingerprint.
-- A verifier that fetches live PR state from GitHub, checks the signature, and durably consumes it before writing a successful check.
-- A required check pinned to a dedicated GitHub App ID. A different app or ordinary personal token cannot satisfy that pinned requirement just by copying the check name.
-- Durable SQLite receipts and rejection of concurrent replay. An uncertain GitHub write is recorded and not blindly retried.
+WebAuthn verifies user presence and verification, not that Touch ID specifically was used. Passkeys may sync; this flow has no hardware attestation and cannot promise a non-exportable Secure Enclave key. The site shows the actual authenticator choice.
 
-GitHub does not let an author approve their own PR review. For this one-person experiment, the native command starts the request. Tempo instead starts it from a review webhook and pushes it to a background client. This demo uses an authenticated loopback request and a foreground native prompt; it does not implement webhooks, automatic review policy, or team identity management.
+## Implementation
 
-## Trust boundary: read before using beyond the demo
+- `.github/workflows/signed-approval.yml`: trusted workflow for PR events and proof comments.
+- `approval/policy.mjs`: exact action, challenge, signer and freshness validation.
+- `approval/run.mjs`: GitHub check/comment integration and durable receipt updates.
+- `approval/webauthn.mjs`: vendored dependency-free verifier from the generic signer.
+- `approval/config.json`: trusted owner-managed public signer configuration.
 
-**The local mode is an experience demo, not isolation from an agent or malware with your Mac account.** The verifier, enrolled public key, database and GitHub App private key live in `.state/`. An agent that can edit those files or use your GitHub administrator account could bypass the gate. File mode 0600 protects other OS users, not software running as you. GitHub administrators can also change branch protection even when `enforce_admins` is on.
+Run `npm test` using Node 24+. Tests use actual cryptographic signatures; network effects are faked at the GitHub boundary. The earlier native/App experiment remains in `native/`, `src/`, and `scripts/` as reference, but is not used by this workflow.
 
-For a rigid agent boundary, operate the verifier and enrollment under a separately administered identity or host inaccessible to the agent; keep the App key and GitHub administration credentials there. Give the coding agent only a scoped repo writer credential. Run trusted verifier code from an operator-controlled checkout, never from a PR branch. The current client/server transport is loopback-only; a remote deployment additionally needs authenticated TLS and separate client configuration, which this experiment does not claim to provide.
-
-Enrollment is a local operator action, not a public API. The server pins the exported public key and never accepts a replacement key in an approval request. There is no remote hardware attestation: the operator trusts that enrollment used the supplied native program. The SQLite triggers protect application invariants, not an administrator who can rewrite the database; this is not a WORM storage service.
-
-Expiry governs when a signature can be accepted. An accepted GitHub check remains approval for that commit; it is not revoked two minutes later. Strict branch protection requires an up-to-date branch. The verifier also checks the base SHA at acceptance. GitHub's check model attaches checks to commits, not individual PR numbers; avoid reusing the same head commit across different PRs as a distinct approval boundary.
-
-## Development and validation
-
-```sh
-npm test
-swift build --package-path native -c release
-```
-
-The CI definition is provided as `ci/test-workflow.yml`; it is inactive because the publishing token lacks workflow scope. Local tests were run instead.
-
-No npm dependencies. Tests use real P-256 signatures and SQLite, including a loopback HTTP round trip; GitHub is replaced at the network boundary. Swift builds the actual Secure Enclave signer. Hardware signing and a live App-authenticated check require the user's enrollment and installation; passing tests does not stand in for those steps.
-
-Files: `src/approval.mjs` is the pure validation boundary; `src/gate.mjs` serializes transitions and external effects; `src/github.mjs` handles installation-token GitHub calls; `native/Sources/main.swift` handles the Touch ID prompt and signing. `.state/` is ignored and must never be committed.
-
-## Remove the experiment
-
-Stop `npm start` with Ctrl-C. Uninstall and delete the dedicated GitHub App in GitHub settings. Delete this demo repository if no longer wanted. Delete the local `.state/` folder to remove its wrapped key, receipts, and credentials. No LaunchAgent, login item, or browser extension was installed.
+This is an independent [Tempo-inspired](https://tempo.xyz/developers/blog/human-authorization-in-agentic-workflows) experiment, owned by **dionysuzx**, not by an assistant. It is public because GitHub Free rejected protection on a private repo. No private credentials are committed.

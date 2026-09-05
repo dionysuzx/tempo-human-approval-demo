@@ -1,0 +1,38 @@
+name: Signed PR approval
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+        default: '1'
+permissions:
+  contents: read
+  checks: write
+  issues: write
+  pull-requests: read
+concurrency:
+  group: signed-approval-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
+  cancel-in-progress: false
+jobs:
+  approval:
+    if: github.event_name != 'issue_comment' || github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      # Never check out or execute the PR branch. The event file is parsed as data.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - run: node approval/run.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
