@@ -1,2 +1,2 @@
 This is a harmless practice change for Touch ID approval.
-Current greeting: Hello.
+Current greeting: Hello, human.
