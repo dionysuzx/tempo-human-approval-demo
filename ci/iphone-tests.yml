@@ -1,0 +1,37 @@
+name: iPhone and relay tests
+on:
+  pull_request:
+    paths:
+      - 'approval/**'
+      - 'test/**'
+      - 'ios/**'
+      - 'mac-relay/**'
+      - 'relay-site/**'
+      - '.github/workflows/iphone-tests.yml'
+permissions:
+  contents: read
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - run: npm test
+      - run: npm ci
+        working-directory: relay-site
+      - run: npm run build && npx tsc --noEmit && npm run lint
+        working-directory: relay-site
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: swift test --package-path ios
+      - run: xcodebuild -project ios/TempoApproval.xcodeproj -scheme TempoApproval -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build

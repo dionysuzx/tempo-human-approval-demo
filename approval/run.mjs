@@ -74,14 +74,17 @@ export async function run(api, event, config, now = Date.now()) {
     status: 'completed', conclusion: 'cancelled', output: { title: 'Superseded', summary: 'Use the latest signing link.', text: JSON.stringify({ ...saved(previous), state: 'superseded' }) } });
   const request = reusable ?? requestFor(current, now);
   const enrolled = !!config.nativeSigner?.fingerprint;
-  const site = new URL(config.signingSite);
+  const site = new URL(config.mobileApprovalSite || config.signingSite);
+  if (config.mobileApprovalSite && site.protocol !== 'https:') throw Error('Mobile approval requires HTTPS');
   site.pathname = '/native';
   const linkURL = new URL(signingLink(site.href, request));
   { const fragment = new URLSearchParams(linkURL.hash.slice(1)); fragment.set('delivery', 'github-demo'); fragment.set('deliver', 'http://localhost:8792/deliver'); linkURL.hash = fragment.toString(); }
   const link = linkURL.href;
   const check = reusable ? previous : await api.call('/check-runs', 'POST', { name: CHECK, head_sha: current.head, external_id: `signed-proof:${number}:${request.id}`,
     status: 'in_progress', output: { title: 'Waiting for your signed proof', summary: `Open the signing link in the PR comment.`, text: JSON.stringify(request) } });
-  const instructions = !enrolled
+  const instructions = config.mobileApprovalSite
+    ? `### Approve this PR\n\n[Open approval app](${link}) to review these exact commits. On iPhone, use the enrolled Face ID app. On Mac, continue to Native Signing Bridge. The app returns to this PR after confirmed proof delivery.\n\nCommit: \`${current.head}\` · Link expires ${new Date(request.expires).toISOString()}. If no iPhone key is enrolled, the repository owner must enroll it first. For a fresh link, comment \`/request-approval\`.`
+    : !enrolled
     ? `### Register your signing key first\n\nThis repository has not registered your native signing key yet. [Set up Native Signing Bridge](${site.href}) to set it up, then have the repository owner register the public record shown there. No approval can pass until registration is complete.\n\nAfter registration, comment \`/request-approval\` for a signing link.`
     : `### Approve this PR\n\n**⌘-click** [Open Native Signing Bridge](${link}) in **Brave** to keep this PR open in its own tab. On the local launch page, click **Open Mac app**, review the message in **Native Signing Bridge**, and approve with Touch ID. Your signed proof will be posted here automatically.\n\nCommit: \`${current.head}\` · Link expires ${new Date(request.expires).toISOString()}.\n\nKeep the local signer running. For a new link, comment \`/request-approval\`.`;
   const linkComment = await api.call(`/issues/${number}/comments`, 'POST', { body: instructions });
@@ -92,7 +95,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH));
   const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url)));
   if (process.env.BROWSER_SIGNER_REVOKED === 'true') config.signer = null;
-  if (process.env.NATIVE_SIGNER_REVOKED === 'true') config.nativeSigner = null;
+  if (process.env.NATIVE_SIGNER_REVOKED === 'true') { config.nativeSigner = null; config.iphoneSigner = null; }
   try { await run(new API(process.env.GITHUB_REPOSITORY, process.env.GITHUB_TOKEN), event, config); }
   catch (error) { console.error(error.message); process.exitCode = 1; }
 }

@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { verifyProof } from './webauthn.mjs';
+import { verifyProof, fingerprint } from './webauthn.mjs';
 import { verifyNative } from './native.mjs';
 export const CHECK = 'Human approval / signed proof';
 export const APP_ID = 15368; // GitHub Actions on github.com; verify live when installing protection.
@@ -38,7 +38,11 @@ export async function acceptProof(proof, request, current, config, now = Date.no
   if (!sameAction(request, current)) throw Error('PR changed; use the link for its current commits');
   if ((native ? proof.message : proof.payloadText) !== message(request)) throw Error('Proof signs a different action or request');
   if (!native && (proof.origin !== config.signer.origin || proof.credentialId !== config.signer.credentialId)) throw Error('Proof is from an unregistered credential or origin');
-  const result = native ? await verifyNative(proof, config.nativeSigner, now) : await verifyProof(proof, config.signer.fingerprint);
+  const claimedFingerprint = native ? await fingerprint(proof.publicKeySpki) : null;
+  const nativeSigner = native ? [config.nativeSigner, config.iphoneSigner].find(
+    signer => signer?.fingerprint === claimedFingerprint && signer.origin === proof.origin,
+  ) : null;
+  const result = native ? await verifyNative(proof, nativeSigner, now) : await verifyProof(proof, config.signer.fingerprint);
   if (!native && result.trust !== 'matches') throw Error('Signer is not trusted');
   return { ...request, state: 'approved', acceptedAt: now,
     proofKind: native ? 'native' : 'webauthn', proofHash: createHash('sha256').update(JSON.stringify(proof)).digest('hex'), signer: result.fingerprint };
