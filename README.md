@@ -1,12 +1,17 @@
 # Approve a PR with a signed message
 
-Open [PR #1](https://github.com/dionysuzx/tempo-human-approval-demo/pull/1). Its automation posts an **Open the signing page** link. In Brave, review the prefilled message, sign with your passkey or Touch ID, copy the proof, and paste it as a new PR comment. A verified proof turns the required check green. You still choose when to merge.
+Two ways to approve the same kind of harmless change:
+
+- **[PR #1 — browser signing](https://github.com/dionysuzx/tempo-human-approval-demo/pull/1):** ⌘-click the bot's signing link in Brave, sign on the website, copy the proof, and paste it as a new PR comment.
+- **[PR #2 — native Touch ID](https://github.com/dionysuzx/tempo-human-approval-demo/pull/2):** ⌘-click the bot's signing link, open the native app, review and sign with Touch ID. The proof is posted automatically by the local delivery helper.
+
+A verified proof turns the required check green. Neither path merges automatically. GitHub Markdown cannot force a new tab, so use ⌘-click (or right-click → Open Link in New Tab) to preserve the PR page.
 
 The signing page currently runs on your Mac at **http://localhost:8787/**. Keep it running. This URL is not a public deployment. The page remains a generic text signer; this repository defines what a PR approval means.
 
 ## First time
 
-Use **Set up signing** on that page. The repository owner must then pin the public signer fingerprint and origin in `approval/config.json` on trusted `main`. A key supplied by a PR comment is never automatically trusted. No GitHub App creation or native launcher is required for this flow.
+Use **Set up signing** on that page. The repository owner must then pin the public signer fingerprint and origin in `approval/config.json` on trusted `main`. A key supplied by a PR comment is never automatically trusted. No GitHub App creation is required. The native route uses the separate Native Signing Bridge app; its public key is separately registered in `approval/config.json`. The website checks local delivery readiness before enabling native approval.
 
 Links expire after 15 minutes. Comment `/request-approval` for a fresh link. A changed head or base commit requires a new request. Paste the full copied JSON directly, or inside a fenced `json` block.
 
@@ -27,6 +32,8 @@ WebAuthn verifies user presence and verification, not that Touch ID specifically
 - `approval/run.mjs`: GitHub check/comment integration and durable receipt updates.
 - `approval/webauthn.mjs`: vendored dependency-free verifier from the generic signer.
 - `approval/config.json`: trusted owner-managed public signer configuration.
+
+For native automatic posting, run `node approval/delivery.mjs` from this checkout. It listens on localhost:8792, accepts only proofs for PR #2, verifies them before posting, and keeps the GitHub credential inside the local process. It reserves deliveries durably before network writes so an uncertain result is not blindly retried. This process uses the existing `gh` authentication; it must remain trusted.
 
 Run `npm test` using Node 24+. Tests use actual cryptographic signatures; network effects are faked at the GitHub boundary. The earlier native/App experiment remains in `native/`, `src/`, and `scripts/` as reference, but is not used by this workflow.
 
