@@ -79,6 +79,7 @@ export async function run(api, event, config, now = Date.now()) {
   if (nativeRoute) site.pathname = '/native';
   const linkURL = new URL(signingLink(site.href, request));
   if (nativeRoute) { const fragment = new URLSearchParams(linkURL.hash.slice(1)); fragment.set('delivery', 'github-demo'); fragment.set('deliver', 'http://localhost:8792/deliver/2'); linkURL.hash = fragment.toString(); }
+  if (!nativeRoute && config.signer?.fingerprint) { const fragment = new URLSearchParams(linkURL.hash.slice(1)); fragment.set('signer', config.signer.fingerprint); linkURL.hash = fragment.toString(); }
   const link = linkURL.href;
   const check = reusable ? previous : await api.call('/check-runs', 'POST', { name: CHECK, head_sha: current.head, external_id: `signed-proof:${number}:${request.id}`,
     status: 'in_progress', output: { title: 'Waiting for your signed proof', summary: `Open the signing link in the PR comment.`, text: JSON.stringify(request) } });
